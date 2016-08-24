@@ -8,7 +8,7 @@ pacemaker_status=$(systemctl is-active pacemaker)
 # and we're updating the deployment (not creating).
 if [ "$pacemaker_status" = "active" -a \
      "$(hiera bootstrap_nodeid)" = "$(facter hostname)" -a \
-     "$(hiera update_identifier)" != "nil" ]; then
+     "$(hiera stack_action)" = "UPDATE" ]; then
 
     #ensure neutron constraints like
     #https://review.openstack.org/#/c/245093/
@@ -18,8 +18,8 @@ if [ "$pacemaker_status" = "active" -a \
 
     pcs resource disable httpd
     check_resource httpd stopped 300
-    pcs resource disable openstack-keystone
-    check_resource openstack-keystone stopped 1800
+    pcs resource disable openstack-core
+    check_resource openstack-core stopped 1800
 
     if pcs status | grep haproxy-clone; then
         pcs resource restart haproxy-clone
@@ -30,15 +30,9 @@ if [ "$pacemaker_status" = "active" -a \
     pcs resource restart memcached-clone
     pcs resource restart galera-master
 
-    pcs resource enable openstack-keystone
-    check_resource openstack-keystone started 1800
+    pcs resource enable openstack-core
+    check_resource openstack-core started 1800
     pcs resource enable httpd
     check_resource httpd started 800
 
-fi
-
-if [ "$pacemaker_status" = "active" ]; then
-    # TODO(marios): remove this once +bug/1561012
-    # need this on all controllers:
-    systemctl reload haproxy
 fi

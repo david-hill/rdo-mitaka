@@ -19,6 +19,15 @@ Ceilometer:
         vip_param: CeilometerApi
     port: 8777
 
+Gnocchi:
+    Internal:
+        vip_param: GnocchiApi
+    Public:
+        vip_param: Public
+    Admin:
+        vip_param: GnocchiApi
+    port: 8041
+
 Cinder:
     Internal:
         vip_param: CinderApi
@@ -72,40 +81,27 @@ Horizon:
             '': /dashboard
     port: 80
 
+# TODO(ayoung): V3 is a temporary fix. Endpoints should be versionless.
+# Required for https://bugs.launchpad.net/puppet-nova/+bug/1542486
 Keystone:
     Internal:
         vip_param: KeystonePublicApi
         uri_suffixes:
             '': /v2.0
             EC2: /v2.0/ec2tokens
+            V3: /v3
         names:
             EC2: KeystoneEC2
     Public:
         vip_param: Public
         uri_suffixes:
             '': /v2.0
+            V3: /v3
     Admin:
         vip_param: KeystoneAdminApi
         uri_suffixes:
             '': /v2.0
-        port: 35357
-    port: 5000
-
-# TODO(ayoung): V3 is a temporary fix. Endpoints should be versionless.
-# Required for https://bugs.launchpad.net/puppet-nova/+bug/1542486
-KeystoneV3:
-    Internal:
-        vip_param: KeystonePublicApi
-        uri_suffixes:
-            '': /v3
-    Public:
-        vip_param: Public
-        uri_suffixes:
-            '': /v3
-    Admin:
-        vip_param: KeystoneAdminApi
-        uri_suffixes:
-            '': /v3
+            V3: /v3
         port: 35357
     port: 5000
 
@@ -123,17 +119,14 @@ Nova:
         vip_param: NovaApi
         uri_suffixes:
             '': /v2.1/%(tenant_id)s
-            V3: /v3
     Public:
         vip_param: Public
         uri_suffixes:
             '': /v2.1/%(tenant_id)s
-            V3: /v3
     Admin:
         vip_param: NovaApi
         uri_suffixes:
             '': /v2.1/%(tenant_id)s
-            V3: /v3
     port: 8774
 
 NovaEC2:
@@ -184,7 +177,7 @@ Sahara:
         uri_suffixes:
             '': /v1.1/%(tenant_id)s
     Public:
-        vip_param: SaharaApi
+        vip_param: Public
         uri_suffixes:
             '': /v1.1/%(tenant_id)s
     Admin:

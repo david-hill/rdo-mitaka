@@ -121,6 +121,9 @@ if hiera('step') >= 2 {
   include ::cinder::db::mysql
   include ::heat::db::mysql
   include ::sahara::db::mysql
+  if downcase(hiera('gnocchi_indexer_backend')) == 'mysql' {
+    include ::gnocchi::db::mysql
+  }
   if downcase(hiera('ceilometer_backend')) == 'mysql' {
     include ::ceilometer::db::mysql
     include ::aodh::db::mysql
@@ -177,7 +180,7 @@ if hiera('step') >= 2 {
   }
 
   if str2bool(hiera('enable_ceph_storage', false)) {
-    if str2bool(hiera('ceph_osd_selinux_permissive', true)) {
+    if str2bool(hiera('ceph_osd_selinux_permissive', false)) {
       exec { 'set selinux to permissive on boot':
         command => "sed -ie 's/^SELINUX=.*/SELINUX=permissive/' /etc/selinux/config",
         onlyif  => "test -f /etc/selinux/config && ! grep '^SELINUX=permissive' /etc/selinux/config",
@@ -276,7 +279,12 @@ if hiera('step') >= 3 {
   }
 
   class { '::nova' :
-    memcached_servers => $memcached_servers
+    memcached_servers => $memcached_servers,
+  }
+  class { '::nova::cache' :
+    backend          => 'oslo_cache.memcache_pool',
+    enabled          => true,
+    memcache_servers => $memcached_servers,
   }
   include ::nova::config
   include ::nova::api
@@ -287,6 +295,10 @@ if hiera('step') >= 3 {
   include ::nova::vncproxy
   include ::nova::scheduler
   include ::nova::scheduler::filter
+
+  nova_config {
+    'DEFAULT/host':                      value => $fqdn;
+  }
 
   if hiera('neutron::core_plugin') == 'midonet.neutron.plugin_v1.MidonetPluginV2' {
 
@@ -344,20 +356,36 @@ if hiera('step') >= 3 {
   include ::neutron::server
   include ::neutron::server::notifications
 
-  # If the value of core plugin is set to 'nuage' or 'opencontrail',
-  # include nuage or opencontrail core plugins, and it does not
-  # need the l3, dhcp and metadata agents
+  neutron_config {
+    'DEFAULT/host': value => $fqdn;
+  }
+
+  # If the value of core plugin is set to 'nuage' or'opencontrail' or 'plumgrid',
+  # include nuage or opencontrail or plumgrid core plugins
+  # else use the default value of 'ml2'
   if hiera('neutron::core_plugin') == 'neutron.plugins.nuage.plugin.NuagePlugin' {
     include ::neutron::plugins::nuage
   } elsif hiera('neutron::core_plugin') == 'neutron_plugin_contrail.plugins.opencontrail.contrail_plugin.NeutronPluginContrailCoreV2' {
     include ::neutron::plugins::opencontrail
+  }
+  elsif hiera('neutron::core_plugin') == 'networking_plumgrid.neutron.plugins.plugin.NeutronPluginPLUMgridV2' {
+    class { '::neutron::plugins::plumgrid' :
+      connection                   => hiera('neutron::server::database_connection'),
+      controller_priv_host         => hiera('keystone_admin_api_vip'),
+      admin_password               => hiera('admin_password'),
+      metadata_proxy_shared_secret => hiera('nova::api::neutron_metadata_proxy_shared_secret'),
+    }
   } else {
     include ::neutron::agents::l3
     include ::neutron::agents::dhcp
     include ::neutron::agents::metadata
 
+    $dnsmasq_options = hiera('neutron_dnsmasq_options', '')
+
+    # We need to create the dnsmasq-neutron.conf file regardless of
+    # whether there are configured options or the dhcp agent will fail.
     file { '/etc/neutron/dnsmasq-neutron.conf':
-      content => hiera('neutron_dnsmasq_options'),
+      content => $dnsmasq_options,
       owner   => 'neutron',
       group   => 'neutron',
       notify  => Service['neutron-dhcp-service'],
@@ -460,6 +488,7 @@ if hiera('step') >= 3 {
     $cinder_rbd_backend = 'tripleo_ceph'
 
     cinder::backend::rbd { $cinder_rbd_backend :
+      backend_host    => hiera('cinder::host'),
       rbd_pool        => hiera('cinder_rbd_pool_name'),
       rbd_user        => hiera('ceph_client_user_name'),
       rbd_secret_uuid => hiera('ceph::profile::params::fsid'),
@@ -568,6 +597,7 @@ if hiera('step') >= 3 {
   include ::swift::proxy::catch_errors
   include ::swift::proxy::tempurl
   include ::swift::proxy::formpost
+  include ::swift::proxy::bulk
 
   # swift storage
   if str2bool(hiera('enable_swift_storage', true)) {
@@ -605,6 +635,7 @@ if hiera('step') >= 3 {
   include ::ceilometer::expirer
   include ::ceilometer::collector
   include ::ceilometer::agent::auth
+  include ::ceilometer::dispatcher::gnocchi
   class { '::ceilometer::db' :
     database_connection => $ceilometer_database_connection,
   }
@@ -647,7 +678,7 @@ if hiera('step') >= 3 {
   } else {
     $_profile_support = 'None'
   }
-  $neutron_options   = {'profile_support' => $_profile_support }
+  $neutron_options   = merge({'profile_support' => $_profile_support },hiera('horizon::neutron_options',undef))
 
   $memcached_ipv6 = hiera('memcached_ipv6', false)
   if $memcached_ipv6 {
@@ -659,6 +690,26 @@ if hiera('step') >= 3 {
   class { '::horizon':
     cache_server_ip => $horizon_memcached_servers,
     neutron_options => $neutron_options,
+  }
+
+  # Gnocchi
+  $gnocchi_database_connection = hiera('gnocchi_mysql_conn_string')
+  class { '::gnocchi':
+    database_connection => $gnocchi_database_connection,
+  }
+  include ::gnocchi::api
+  include ::gnocchi::wsgi::apache
+  include ::gnocchi::client
+  include ::gnocchi::db::sync
+  include ::gnocchi::storage
+  include ::gnocchi::metricd
+  include ::gnocchi::statsd
+  $gnocchi_backend = downcase(hiera('gnocchi_backend', 'swift'))
+  case $gnocchi_backend {
+      'swift': { include ::gnocchi::storage::swift }
+      'file': { include ::gnocchi::storage::file }
+      'rbd': { include ::gnocchi::storage::ceph }
+      default: { fail('Unrecognized gnocchi_backend parameter.') }
   }
 
   $snmpd_user = hiera('snmpd_readonly_user_name')

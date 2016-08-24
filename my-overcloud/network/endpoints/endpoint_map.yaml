@@ -12,6 +12,7 @@ parameters:
   CeilometerApiVirtualIP: {type: string, default: ''}
   CinderApiVirtualIP: {type: string, default: ''}
   GlanceApiVirtualIP: {type: string, default: ''}
+  GnocchiApiVirtualIP: {type: string, default: ''}
   HeatApiVirtualIP: {type: string, default: ''}
   KeystoneAdminApiVirtualIP: {type: string, default: ''}
   KeystonePublicApiVirtualIP: {type: string, default: ''}
@@ -36,6 +37,9 @@ parameters:
       GlanceAdmin: {protocol: http, port: '9292', host: IP_ADDRESS}
       GlanceInternal: {protocol: http, port: '9292', host: IP_ADDRESS}
       GlancePublic: {protocol: http, port: '9292', host: IP_ADDRESS}
+      GnocchiAdmin: {protocol: http, port: '8041', host: IP_ADDRESS}
+      GnocchiInternal: {protocol: http, port: '8041', host: IP_ADDRESS}
+      GnocchiPublic: {protocol: http, port: '8041', host: IP_ADDRESS}
       HeatAdmin: {protocol: http, port: '8004', host: IP_ADDRESS}
       HeatInternal: {protocol: http, port: '8004', host: IP_ADDRESS}
       HeatPublic: {protocol: http, port: '8004', host: IP_ADDRESS}
@@ -43,9 +47,6 @@ parameters:
       KeystoneAdmin: {protocol: http, port: '35357', host: IP_ADDRESS}
       KeystoneInternal: {protocol: http, port: '5000', host: IP_ADDRESS}
       KeystonePublic: {protocol: http, port: '5000', host: IP_ADDRESS}
-      KeystoneV3Admin: {protocol: http, port: '35357', host: IP_ADDRESS}
-      KeystoneV3Internal: {protocol: http, port: '5000', host: IP_ADDRESS}
-      KeystoneV3Public: {protocol: http, port: '5000', host: IP_ADDRESS}
       NeutronAdmin: {protocol: http, port: '9696', host: IP_ADDRESS}
       NeutronInternal: {protocol: http, port: '9696', host: IP_ADDRESS}
       NeutronPublic: {protocol: http, port: '9696', host: IP_ADDRESS}
@@ -647,6 +648,120 @@ outputs:
                   IP_ADDRESS: {get_param: PublicVirtualIP}
             - ':'
             - get_param: [EndpointMap, GlancePublic, port]
+      GnocchiAdmin:
+        host:
+          str_replace:
+            template:
+              get_param: [EndpointMap, GnocchiAdmin, host]
+            params:
+              CLOUDNAME: {get_param: CloudName}
+              IP_ADDRESS: {get_param: GnocchiApiVirtualIP}
+        port:
+          get_param: [EndpointMap, GnocchiAdmin, port]
+        protocol:
+          get_param: [EndpointMap, GnocchiAdmin, protocol]
+        uri:
+          list_join:
+          - ''
+          - - get_param: [EndpointMap, GnocchiAdmin, protocol]
+            - ://
+            - str_replace:
+                template:
+                  get_param: [EndpointMap, GnocchiAdmin, host]
+                params:
+                  CLOUDNAME: {get_param: CloudName}
+                  IP_ADDRESS: {get_param: GnocchiApiVirtualIP}
+            - ':'
+            - get_param: [EndpointMap, GnocchiAdmin, port]
+        uri_no_suffix:
+          list_join:
+          - ''
+          - - get_param: [EndpointMap, GnocchiAdmin, protocol]
+            - ://
+            - str_replace:
+                template:
+                  get_param: [EndpointMap, GnocchiAdmin, host]
+                params:
+                  CLOUDNAME: {get_param: CloudName}
+                  IP_ADDRESS: {get_param: GnocchiApiVirtualIP}
+            - ':'
+            - get_param: [EndpointMap, GnocchiAdmin, port]
+      GnocchiInternal:
+        host:
+          str_replace:
+            template:
+              get_param: [EndpointMap, GnocchiInternal, host]
+            params:
+              CLOUDNAME: {get_param: CloudName}
+              IP_ADDRESS: {get_param: GnocchiApiVirtualIP}
+        port:
+          get_param: [EndpointMap, GnocchiInternal, port]
+        protocol:
+          get_param: [EndpointMap, GnocchiInternal, protocol]
+        uri:
+          list_join:
+          - ''
+          - - get_param: [EndpointMap, GnocchiInternal, protocol]
+            - ://
+            - str_replace:
+                template:
+                  get_param: [EndpointMap, GnocchiInternal, host]
+                params:
+                  CLOUDNAME: {get_param: CloudName}
+                  IP_ADDRESS: {get_param: GnocchiApiVirtualIP}
+            - ':'
+            - get_param: [EndpointMap, GnocchiInternal, port]
+        uri_no_suffix:
+          list_join:
+          - ''
+          - - get_param: [EndpointMap, GnocchiInternal, protocol]
+            - ://
+            - str_replace:
+                template:
+                  get_param: [EndpointMap, GnocchiInternal, host]
+                params:
+                  CLOUDNAME: {get_param: CloudName}
+                  IP_ADDRESS: {get_param: GnocchiApiVirtualIP}
+            - ':'
+            - get_param: [EndpointMap, GnocchiInternal, port]
+      GnocchiPublic:
+        host:
+          str_replace:
+            template:
+              get_param: [EndpointMap, GnocchiPublic, host]
+            params:
+              CLOUDNAME: {get_param: CloudName}
+              IP_ADDRESS: {get_param: PublicVirtualIP}
+        port:
+          get_param: [EndpointMap, GnocchiPublic, port]
+        protocol:
+          get_param: [EndpointMap, GnocchiPublic, protocol]
+        uri:
+          list_join:
+          - ''
+          - - get_param: [EndpointMap, GnocchiPublic, protocol]
+            - ://
+            - str_replace:
+                template:
+                  get_param: [EndpointMap, GnocchiPublic, host]
+                params:
+                  CLOUDNAME: {get_param: CloudName}
+                  IP_ADDRESS: {get_param: PublicVirtualIP}
+            - ':'
+            - get_param: [EndpointMap, GnocchiPublic, port]
+        uri_no_suffix:
+          list_join:
+          - ''
+          - - get_param: [EndpointMap, GnocchiPublic, protocol]
+            - ://
+            - str_replace:
+                template:
+                  get_param: [EndpointMap, GnocchiPublic, host]
+                params:
+                  CLOUDNAME: {get_param: CloudName}
+                  IP_ADDRESS: {get_param: PublicVirtualIP}
+            - ':'
+            - get_param: [EndpointMap, GnocchiPublic, port]
       HeatAdmin:
         host:
           str_replace:
@@ -963,119 +1078,119 @@ outputs:
         host:
           str_replace:
             template:
-              get_param: [EndpointMap, KeystoneV3Admin, host]
+              get_param: [EndpointMap, KeystoneAdmin, host]
             params:
               CLOUDNAME: {get_param: CloudName}
               IP_ADDRESS: {get_param: KeystoneAdminApiVirtualIP}
         port:
-          get_param: [EndpointMap, KeystoneV3Admin, port]
+          get_param: [EndpointMap, KeystoneAdmin, port]
         protocol:
-          get_param: [EndpointMap, KeystoneV3Admin, protocol]
+          get_param: [EndpointMap, KeystoneAdmin, protocol]
         uri:
           list_join:
           - ''
-          - - get_param: [EndpointMap, KeystoneV3Admin, protocol]
+          - - get_param: [EndpointMap, KeystoneAdmin, protocol]
             - ://
             - str_replace:
                 template:
-                  get_param: [EndpointMap, KeystoneV3Admin, host]
+                  get_param: [EndpointMap, KeystoneAdmin, host]
                 params:
                   CLOUDNAME: {get_param: CloudName}
                   IP_ADDRESS: {get_param: KeystoneAdminApiVirtualIP}
             - ':'
-            - get_param: [EndpointMap, KeystoneV3Admin, port]
+            - get_param: [EndpointMap, KeystoneAdmin, port]
             - /v3
         uri_no_suffix:
           list_join:
           - ''
-          - - get_param: [EndpointMap, KeystoneV3Admin, protocol]
+          - - get_param: [EndpointMap, KeystoneAdmin, protocol]
             - ://
             - str_replace:
                 template:
-                  get_param: [EndpointMap, KeystoneV3Admin, host]
+                  get_param: [EndpointMap, KeystoneAdmin, host]
                 params:
                   CLOUDNAME: {get_param: CloudName}
                   IP_ADDRESS: {get_param: KeystoneAdminApiVirtualIP}
             - ':'
-            - get_param: [EndpointMap, KeystoneV3Admin, port]
+            - get_param: [EndpointMap, KeystoneAdmin, port]
       KeystoneV3Internal:
         host:
           str_replace:
             template:
-              get_param: [EndpointMap, KeystoneV3Internal, host]
+              get_param: [EndpointMap, KeystoneInternal, host]
             params:
               CLOUDNAME: {get_param: CloudName}
               IP_ADDRESS: {get_param: KeystonePublicApiVirtualIP}
         port:
-          get_param: [EndpointMap, KeystoneV3Internal, port]
+          get_param: [EndpointMap, KeystoneInternal, port]
         protocol:
-          get_param: [EndpointMap, KeystoneV3Internal, protocol]
+          get_param: [EndpointMap, KeystoneInternal, protocol]
         uri:
           list_join:
           - ''
-          - - get_param: [EndpointMap, KeystoneV3Internal, protocol]
+          - - get_param: [EndpointMap, KeystoneInternal, protocol]
             - ://
             - str_replace:
                 template:
-                  get_param: [EndpointMap, KeystoneV3Internal, host]
+                  get_param: [EndpointMap, KeystoneInternal, host]
                 params:
                   CLOUDNAME: {get_param: CloudName}
                   IP_ADDRESS: {get_param: KeystonePublicApiVirtualIP}
             - ':'
-            - get_param: [EndpointMap, KeystoneV3Internal, port]
+            - get_param: [EndpointMap, KeystoneInternal, port]
             - /v3
         uri_no_suffix:
           list_join:
           - ''
-          - - get_param: [EndpointMap, KeystoneV3Internal, protocol]
+          - - get_param: [EndpointMap, KeystoneInternal, protocol]
             - ://
             - str_replace:
                 template:
-                  get_param: [EndpointMap, KeystoneV3Internal, host]
+                  get_param: [EndpointMap, KeystoneInternal, host]
                 params:
                   CLOUDNAME: {get_param: CloudName}
                   IP_ADDRESS: {get_param: KeystonePublicApiVirtualIP}
             - ':'
-            - get_param: [EndpointMap, KeystoneV3Internal, port]
+            - get_param: [EndpointMap, KeystoneInternal, port]
       KeystoneV3Public:
         host:
           str_replace:
             template:
-              get_param: [EndpointMap, KeystoneV3Public, host]
+              get_param: [EndpointMap, KeystonePublic, host]
             params:
               CLOUDNAME: {get_param: CloudName}
               IP_ADDRESS: {get_param: PublicVirtualIP}
         port:
-          get_param: [EndpointMap, KeystoneV3Public, port]
+          get_param: [EndpointMap, KeystonePublic, port]
         protocol:
-          get_param: [EndpointMap, KeystoneV3Public, protocol]
+          get_param: [EndpointMap, KeystonePublic, protocol]
         uri:
           list_join:
           - ''
-          - - get_param: [EndpointMap, KeystoneV3Public, protocol]
+          - - get_param: [EndpointMap, KeystonePublic, protocol]
             - ://
             - str_replace:
                 template:
-                  get_param: [EndpointMap, KeystoneV3Public, host]
+                  get_param: [EndpointMap, KeystonePublic, host]
                 params:
                   CLOUDNAME: {get_param: CloudName}
                   IP_ADDRESS: {get_param: PublicVirtualIP}
             - ':'
-            - get_param: [EndpointMap, KeystoneV3Public, port]
+            - get_param: [EndpointMap, KeystonePublic, port]
             - /v3
         uri_no_suffix:
           list_join:
           - ''
-          - - get_param: [EndpointMap, KeystoneV3Public, protocol]
+          - - get_param: [EndpointMap, KeystonePublic, protocol]
             - ://
             - str_replace:
                 template:
-                  get_param: [EndpointMap, KeystoneV3Public, host]
+                  get_param: [EndpointMap, KeystonePublic, host]
                 params:
                   CLOUDNAME: {get_param: CloudName}
                   IP_ADDRESS: {get_param: PublicVirtualIP}
             - ':'
-            - get_param: [EndpointMap, KeystoneV3Public, port]
+            - get_param: [EndpointMap, KeystonePublic, port]
       NeutronAdmin:
         host:
           str_replace:
@@ -1294,123 +1409,6 @@ outputs:
             - ':'
             - get_param: [EndpointMap, NovaPublic, port]
             - /v2.1/%(tenant_id)s
-        uri_no_suffix:
-          list_join:
-          - ''
-          - - get_param: [EndpointMap, NovaPublic, protocol]
-            - ://
-            - str_replace:
-                template:
-                  get_param: [EndpointMap, NovaPublic, host]
-                params:
-                  CLOUDNAME: {get_param: CloudName}
-                  IP_ADDRESS: {get_param: PublicVirtualIP}
-            - ':'
-            - get_param: [EndpointMap, NovaPublic, port]
-      NovaV3Admin:
-        host:
-          str_replace:
-            template:
-              get_param: [EndpointMap, NovaAdmin, host]
-            params:
-              CLOUDNAME: {get_param: CloudName}
-              IP_ADDRESS: {get_param: NovaApiVirtualIP}
-        port:
-          get_param: [EndpointMap, NovaAdmin, port]
-        protocol:
-          get_param: [EndpointMap, NovaAdmin, protocol]
-        uri:
-          list_join:
-          - ''
-          - - get_param: [EndpointMap, NovaAdmin, protocol]
-            - ://
-            - str_replace:
-                template:
-                  get_param: [EndpointMap, NovaAdmin, host]
-                params:
-                  CLOUDNAME: {get_param: CloudName}
-                  IP_ADDRESS: {get_param: NovaApiVirtualIP}
-            - ':'
-            - get_param: [EndpointMap, NovaAdmin, port]
-            - /v3
-        uri_no_suffix:
-          list_join:
-          - ''
-          - - get_param: [EndpointMap, NovaAdmin, protocol]
-            - ://
-            - str_replace:
-                template:
-                  get_param: [EndpointMap, NovaAdmin, host]
-                params:
-                  CLOUDNAME: {get_param: CloudName}
-                  IP_ADDRESS: {get_param: NovaApiVirtualIP}
-            - ':'
-            - get_param: [EndpointMap, NovaAdmin, port]
-      NovaV3Internal:
-        host:
-          str_replace:
-            template:
-              get_param: [EndpointMap, NovaInternal, host]
-            params:
-              CLOUDNAME: {get_param: CloudName}
-              IP_ADDRESS: {get_param: NovaApiVirtualIP}
-        port:
-          get_param: [EndpointMap, NovaInternal, port]
-        protocol:
-          get_param: [EndpointMap, NovaInternal, protocol]
-        uri:
-          list_join:
-          - ''
-          - - get_param: [EndpointMap, NovaInternal, protocol]
-            - ://
-            - str_replace:
-                template:
-                  get_param: [EndpointMap, NovaInternal, host]
-                params:
-                  CLOUDNAME: {get_param: CloudName}
-                  IP_ADDRESS: {get_param: NovaApiVirtualIP}
-            - ':'
-            - get_param: [EndpointMap, NovaInternal, port]
-            - /v3
-        uri_no_suffix:
-          list_join:
-          - ''
-          - - get_param: [EndpointMap, NovaInternal, protocol]
-            - ://
-            - str_replace:
-                template:
-                  get_param: [EndpointMap, NovaInternal, host]
-                params:
-                  CLOUDNAME: {get_param: CloudName}
-                  IP_ADDRESS: {get_param: NovaApiVirtualIP}
-            - ':'
-            - get_param: [EndpointMap, NovaInternal, port]
-      NovaV3Public:
-        host:
-          str_replace:
-            template:
-              get_param: [EndpointMap, NovaPublic, host]
-            params:
-              CLOUDNAME: {get_param: CloudName}
-              IP_ADDRESS: {get_param: PublicVirtualIP}
-        port:
-          get_param: [EndpointMap, NovaPublic, port]
-        protocol:
-          get_param: [EndpointMap, NovaPublic, protocol]
-        uri:
-          list_join:
-          - ''
-          - - get_param: [EndpointMap, NovaPublic, protocol]
-            - ://
-            - str_replace:
-                template:
-                  get_param: [EndpointMap, NovaPublic, host]
-                params:
-                  CLOUDNAME: {get_param: CloudName}
-                  IP_ADDRESS: {get_param: PublicVirtualIP}
-            - ':'
-            - get_param: [EndpointMap, NovaPublic, port]
-            - /v3
         uri_no_suffix:
           list_join:
           - ''
@@ -1740,7 +1738,7 @@ outputs:
               get_param: [EndpointMap, SaharaPublic, host]
             params:
               CLOUDNAME: {get_param: CloudName}
-              IP_ADDRESS: {get_param: SaharaApiVirtualIP}
+              IP_ADDRESS: {get_param: PublicVirtualIP}
         port:
           get_param: [EndpointMap, SaharaPublic, port]
         protocol:
@@ -1755,7 +1753,7 @@ outputs:
                   get_param: [EndpointMap, SaharaPublic, host]
                 params:
                   CLOUDNAME: {get_param: CloudName}
-                  IP_ADDRESS: {get_param: SaharaApiVirtualIP}
+                  IP_ADDRESS: {get_param: PublicVirtualIP}
             - ':'
             - get_param: [EndpointMap, SaharaPublic, port]
             - /v1.1/%(tenant_id)s
@@ -1769,7 +1767,7 @@ outputs:
                   get_param: [EndpointMap, SaharaPublic, host]
                 params:
                   CLOUDNAME: {get_param: CloudName}
-                  IP_ADDRESS: {get_param: SaharaApiVirtualIP}
+                  IP_ADDRESS: {get_param: PublicVirtualIP}
             - ':'
             - get_param: [EndpointMap, SaharaPublic, port]
       SwiftAdmin:
