@@ -119,7 +119,8 @@ if hiera('step') >= 1 {
   $rabbit_ipv6 = str2bool(hiera('rabbit_ipv6', false))
   if $rabbit_ipv6 {
       $rabbit_env = merge(hiera('rabbitmq_environment'), {
-        'RABBITMQ_SERVER_START_ARGS' => '"-proto_dist inet6_tcp"'
+        'RABBITMQ_SERVER_START_ARGS' => '"-proto_dist inet6_tcp"',
+        'RABBITMQ_CTL_ERL_ARGS' => '"-proto_dist inet6_tcp"'
       })
   } else {
     $rabbit_env = hiera('rabbitmq_environment')
@@ -445,6 +446,7 @@ if hiera('step') >= 2 {
       resource_params => 'set_policy=\'ha-all ^(?!amq\.).* {"ha-mode":"all"}\'',
       clone_params    => 'ordered=true interleave=true',
       meta_params     => 'notify=true',
+      op_params       => 'start timeout=200s stop timeout=200s',
       require         => Class['::rabbitmq'],
     }
 
@@ -481,6 +483,7 @@ if hiera('step') >= 2 {
       master_params   => '',
       meta_params     => 'notify=true ordered=true interleave=true',
       resource_params => 'wait_last_known_master=true',
+      op_params       => 'start timeout=200s stop timeout=200s',
       require         => Class['::redis'],
     }
 
@@ -687,17 +690,6 @@ MYSQL_HOST=localhost\n",
   $http_store = ['glance.store.http.Store']
   $glance_store = concat($http_store, $backend_store)
 
-  if $glance_backend == 'file' and hiera('glance_file_pcmk_manage', false) {
-    $secontext = 'context="system_u:object_r:glance_var_lib_t:s0"'
-    pacemaker::resource::filesystem { 'glance-fs':
-      device       => hiera('glance_file_pcmk_device'),
-      directory    => hiera('glance_file_pcmk_directory'),
-      fstype       => hiera('glance_file_pcmk_fstype'),
-      fsoptions    => join([$secontext, hiera('glance_file_pcmk_options', '')],','),
-      clone_params => '',
-    }
-  }
-
   # TODO: notifications, scrubber, etc.
   include ::glance
   include ::glance::config
@@ -822,7 +814,7 @@ MYSQL_HOST=localhost\n",
     enabled        => false,
   }
   include ::neutron::server::notifications
-  if  hiera('neutron::core_plugin') == 'neutron.plugins.nuage.plugin.NuagePlugin' {
+  if  hiera('neutron::core_plugin') == 'nuage_neutron.plugins.nuage.plugin.NuagePlugin' {
     include ::neutron::plugins::nuage
   }
   if  hiera('neutron::core_plugin') == 'neutron_plugin_contrail.plugins.opencontrail.contrail_plugin.NeutronPluginContrailCoreV2' {
@@ -868,10 +860,12 @@ MYSQL_HOST=localhost\n",
       enabled        => false,
     }
   }
-  include ::neutron::plugins::ml2
-  class { '::neutron::agents::ml2::ovs':
-    manage_service => false,
-    enabled        => false,
+  if  hiera('neutron::core_plugin') == 'ml2' {
+    include ::neutron::plugins::ml2
+    class { '::neutron::agents::ml2::ovs':
+      manage_service => false,
+      enabled        => false,
+    }
   }
 
   if 'cisco_ucsm' in hiera('neutron::plugins::ml2::mechanism_drivers') {
@@ -1437,6 +1431,18 @@ if hiera('step') >= 4 {
     }
 
     # Glance
+    if $glance_backend == 'file' and hiera('glance_file_pcmk_manage', false) {
+      $secontext = 'context="system_u:object_r:glance_var_lib_t:s0"'
+      pacemaker::resource::filesystem { 'glance-fs':
+        device           => hiera('glance_file_pcmk_device'),
+        directory        => hiera('glance_file_pcmk_directory'),
+        fstype           => hiera('glance_file_pcmk_fstype'),
+        fsoptions        => join([$secontext, hiera('glance_file_pcmk_options', '')],','),
+        verify_on_create => true,
+        clone_params     => '',
+      }
+    }
+
     pacemaker::resource::service { $::glance::params::registry_service_name :
       clone_params => 'interleave=true',
       require      => Pacemaker::Resource::Ocf['openstack-core'],

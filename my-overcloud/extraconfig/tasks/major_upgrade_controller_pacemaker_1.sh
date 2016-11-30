@@ -146,6 +146,20 @@ fi
 # https://bugs.launchpad.net/tripleo/+bug/1597674
 yum -y install openstack-gnocchi-api openstack-gnocchi-indexer-sqlalchemy openstack-gnocchi-carbonara openstack-gnocchi-statsd openstack-gnocchi-metricd openstack-sahara openstack-sahara-api openstack-sahara-engine python-cradox
 
+# Special-case OVS for https://bugs.launchpad.net/tripleo/+bug/1635205
+if [[ -n $(rpm -q --scripts openvswitch | awk '/postuninstall/,/*/' | grep "systemctl.*try-restart") ]]; then
+    echo "Manual upgrade of openvswitch - restart in postun detected"
+    mkdir OVS_UPGRADE || true
+    pushd OVS_UPGRADE
+    echo "Attempting to downloading latest openvswitch with yumdownloader"
+    yumdownloader --resolve openvswitch
+    echo "Updating openvswitch with nopostun option"
+    rpm -U --replacepkgs --nopostun ./*.rpm
+    popd
+else
+    echo "Skipping manual upgrade of openvswitch - no restart in postun detected"
+fi
+
 yum -y install python-zaqarclient  # needed for os-collect-config
 yum -y -q update
 
@@ -159,17 +173,19 @@ wsrep_on = ON
 wsrep_cluster_address = gcomm://localhost
 EOF
 
-if [ "$(hiera -c /etc/puppet/hiera.yaml bootstrap_nodeid)" = "$(facter hostname)" ]; then
-    if [ $DO_MYSQL_UPGRADE -eq 1 ]; then
-        # Scripts run via heat have no HOME variable set and this confuses
-        # mysqladmin
-        export HOME=/root
-        mkdir /var/lib/mysql || /bin/true
-        chown mysql:mysql /var/lib/mysql
-        chmod 0755 /var/lib/mysql
-        restorecon -R /var/lib/mysql/
-        mysql_install_db --datadir=/var/lib/mysql --user=mysql
-        chown -R mysql:mysql /var/lib/mysql/
+if [ $DO_MYSQL_UPGRADE -eq 1 ]; then
+    # Scripts run via heat have no HOME variable set and this confuses
+    # mysqladmin
+    export HOME=/root
+
+    mkdir /var/lib/mysql || /bin/true
+    chown mysql:mysql /var/lib/mysql
+    chmod 0755 /var/lib/mysql
+    restorecon -R /var/lib/mysql/
+    mysql_install_db --datadir=/var/lib/mysql --user=mysql
+    chown -R mysql:mysql /var/lib/mysql/
+
+    if [ "$(hiera -c /etc/puppet/hiera.yaml bootstrap_nodeid)" = "$(facter hostname)" ]; then
         mysqld_safe --wsrep-new-cluster &
         # We have a populated /root/.my.cnf with root/password here so
         # we need to temporarily rename it because the newly created
@@ -186,6 +202,9 @@ fi
 
 # If we reached here without error we can safely blow away the origin
 # mysql dir from every controller
+
+# TODO: What if the upgrade fails on the bootstrap node, but not on
+# this controller.  Data may be lost.
 if [ $DO_MYSQL_UPGRADE -eq 1 ]; then
     rm -r $MYSQL_TEMP_UPGRADE_BACKUP_DIR
 fi
