@@ -446,6 +446,7 @@ if hiera('step') >= 2 {
       resource_params => 'set_policy=\'ha-all ^(?!amq\.).* {"ha-mode":"all"}\'',
       clone_params    => 'ordered=true interleave=true',
       meta_params     => 'notify=true',
+      op_params       => 'start timeout=200s stop timeout=200s',
       require         => Class['::rabbitmq'],
     }
 
@@ -482,6 +483,7 @@ if hiera('step') >= 2 {
       master_params   => '',
       meta_params     => 'notify=true ordered=true interleave=true',
       resource_params => 'wait_last_known_master=true',
+      op_params       => 'start timeout=200s stop timeout=200s',
       require         => Class['::redis'],
     }
 
@@ -687,17 +689,6 @@ MYSQL_HOST=localhost\n",
   }
   $http_store = ['glance.store.http.Store']
   $glance_store = concat($http_store, $backend_store)
-
-  if $glance_backend == 'file' and hiera('glance_file_pcmk_manage', false) {
-    $secontext = 'context="system_u:object_r:glance_var_lib_t:s0"'
-    pacemaker::resource::filesystem { 'glance-fs':
-      device       => hiera('glance_file_pcmk_device'),
-      directory    => hiera('glance_file_pcmk_directory'),
-      fstype       => hiera('glance_file_pcmk_fstype'),
-      fsoptions    => join([$secontext, hiera('glance_file_pcmk_options', '')],','),
-      clone_params => '',
-    }
-  }
 
   # TODO: notifications, scrubber, etc.
   include ::glance
@@ -1440,6 +1431,18 @@ if hiera('step') >= 4 {
     }
 
     # Glance
+    if $glance_backend == 'file' and hiera('glance_file_pcmk_manage', false) {
+      $secontext = 'context="system_u:object_r:glance_var_lib_t:s0"'
+      pacemaker::resource::filesystem { 'glance-fs':
+        device           => hiera('glance_file_pcmk_device'),
+        directory        => hiera('glance_file_pcmk_directory'),
+        fstype           => hiera('glance_file_pcmk_fstype'),
+        fsoptions        => join([$secontext, hiera('glance_file_pcmk_options', '')],','),
+        verify_on_create => true,
+        clone_params     => '',
+      }
+    }
+
     pacemaker::resource::service { $::glance::params::registry_service_name :
       clone_params => 'interleave=true',
       require      => Pacemaker::Resource::Ocf['openstack-core'],

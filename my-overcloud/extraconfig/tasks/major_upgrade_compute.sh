@@ -33,6 +33,18 @@ fi
 yum -y install python-zaqarclient  # needed for os-collect-config
 yum -y update
 
+# Problem creating vif if not restarted.
+if systemctl is-enabled openvswitch; then
+   systemctl restart openvswitch
+fi
+
+# Look like it is required after the installation of the new openvswitch.
+if systemctl is-enabled neutron-openvswitch-agent; then
+    if systemctl is-failed neutron-openvswitch-agent; then
+        systemctl restart neutron-openvswitch-agent
+    fi
+fi
+
 ENDOFCAT
 
 # ensure the permissions are OK
