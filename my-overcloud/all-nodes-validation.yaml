@@ -1,4 +1,4 @@
-heat_template_version: ocata
+heat_template_version: 2015-04-30
 
 description: >
   Software Config to drive validations that occur on all nodes.
@@ -10,14 +10,6 @@ parameters:
     default: ''
     description: A string containing a space separated list of IP addresses used to ping test each available network interface.
     type: string
-  ValidateFqdn:
-    default: false
-    description: Optional validation to ensure FQDN as set by Nova matches the name set in /etc/hosts.
-    type: boolean
-  ValidateNtp:
-    default: true
-    description: Validation to ensure at least one time source is accessible.
-    type: boolean
 
 resources:
   AllNodesValidationsImpl:
@@ -27,10 +19,6 @@ resources:
       inputs:
         - name: ping_test_ips
           default: {get_param: PingTestIps}
-        - name: validate_fqdn
-          default: {get_param: ValidateFqdn}
-        - name: validate_ntp
-          default: {get_param: ValidateNtp}
       config: {get_file: ./validation-scripts/all-nodes.sh}
 
 outputs:

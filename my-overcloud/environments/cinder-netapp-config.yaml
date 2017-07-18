@@ -1,7 +1,7 @@
 # A Heat environment file which can be used to enable a
 # a Cinder NetApp backend, configured via puppet
 resource_registry:
-  OS::TripleO::Services::CinderBackendNetApp: ../puppet/services/cinder-backend-netapp.yaml
+  OS::TripleO::ControllerExtraConfigPre: ../puppet/extraconfig/pre_deploy/controller/cinder-netapp.yaml
 
 parameter_defaults:
   CinderEnableNetappBackend: true
@@ -25,5 +25,5 @@ parameter_defaults:
   CinderNetappControllerIps: ''
   CinderNetappSaPassword: ''
   CinderNetappStoragePools: ''
-  CinderNetappHostType: ''
+  CinderNetappEseriesHostType: 'linux_dm_mp'
   CinderNetappWebservicePath: '/devmgr/v2'

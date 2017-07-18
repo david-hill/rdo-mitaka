@@ -1,4 +1,4 @@
-heat_template_version: ocata
+heat_template_version: 2015-04-30
 
 description: >
   Software Config to no-op for os-net-config. Using this will allow you
@@ -38,8 +38,8 @@ resources:
   OsNetConfigImpl:
     type: OS::Heat::StructuredConfig
     properties:
-      group: apply-config
-      config: {}
+      group: os-apply-config
+      config:
 
 outputs:
   OS::stack_id:
